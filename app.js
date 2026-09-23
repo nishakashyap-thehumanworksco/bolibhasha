@@ -30,9 +30,12 @@ const CREW = {
     does:['Recap rounds','Spaced review','Streak protection']}
 };
 const CREW_ORDER = ['luna','ollie','finn','pip','sandy'];
+/* Idle float timing offset per character, so the crew never bobs in sync —
+   reads as five individually alive creatures instead of one repeated loop. */
+const FLOAT_DELAY = {luna:'0s', ollie:'.35s', finn:'.7s', pip:'1.05s', sandy:'1.4s'};
 function avatar(id, size){
-  size = size || 44;
-  if (CRITTER_IDS.includes(id)) return '<span class="av critter" data-mascot="'+id+'" style="width:'+size+'px;height:'+size+'px"><img src="assets/'+id+'.svg" alt="'+CREW[id].name+'"></span>';
+  size = Math.round((size || 44) * 1.25); // mascots read larger everywhere, uniformly
+  if (CRITTER_IDS.includes(id)) return '<span class="av critter" data-mascot="'+id+'" style="width:'+size+'px;height:'+size+'px;--fd:'+(FLOAT_DELAY[id]||'0s')+'"><img src="assets/'+id+'.svg" alt="'+CREW[id].name+'"></span>';
   return '<span class="av" style="--c:#999;width:'+size+'px;height:'+size+'px;font-size:'+Math.round(size*.46)+'px">?</span>';
 }
 
@@ -157,6 +160,8 @@ S.crowns = S.crowns || {};
 S.badges = S.badges || {};
 S.longestStreak = S.longestStreak || S.streak || 0;
 S.perfectStreak = S.perfectStreak || 0;
+if (S.voiceOn === undefined) S.voiceOn = true;
+if (S.soundOn === undefined) S.soundOn = true;
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 if (S.heartsDay !== today()){ S.hearts = 5; S.heartsDay = today(); }
 if (S.lastDay !== today() && S.lastDay !== yesterday()) S.streak = 0;
@@ -209,6 +214,88 @@ function speak(spokenForm, shownSpelling, speaker){
     speechSynthesis.speak(u);
   }catch(e){ setSpeaking(speaker,false); }
 }
+
+/* English dialogue voices — separate from the regional-language voiceFor()
+   above, since character banter is always in English. Prefer named, higher-
+   quality system voices per character (most platforms ship a few "enhanced"
+   English voices); fall back to any locally-installed (usually better than
+   network-placeholder) English voice, then any English voice at all. Pitch
+   and rate from VOICE_PROFILES still carry each character's personality. */
+const ENGLISH_VOICE_PREF = {
+  luna:['samantha','serena','moira','fiona','zira','female'],
+  ollie:['daniel','alex','fred','rishi','guy','male'],
+  finn:['karen','aaron','nicky','tom','rocko','david'],
+  pip:['tessa','junior','ava','jenny','kid'],
+  sandy:['ralph','bruce','albert','gordon','eric']
+};
+function englishVoiceFor(speaker){
+  const en = voices.filter(v=>v.lang.toLowerCase().startsWith('en'));
+  if (!en.length) return null;
+  const prefs = ENGLISH_VOICE_PREF[speaker] || [];
+  for (const name of prefs){ const m = en.find(v=>v.name.toLowerCase().includes(name)); if (m) return m; }
+  return en.find(v=>v.localService) || en[0];
+}
+function speakLine(text, speaker){
+  if (!S.voiceOn || !('speechSynthesis' in window)) return;
+  const v = englishVoiceFor(speaker);
+  if (!v) return;
+  try{
+    speechSynthesis.cancel(); setSpeaking(speaker,true);
+    const profile = VOICE_PROFILES[speaker] || VOICE_PROFILES.finn;
+    const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = v.lang; u.rate = profile.rate; u.pitch = profile.pitch; u.volume = .92;
+    u.onend = u.onerror = ()=>setSpeaking(speaker,false);
+    speechSynthesis.speak(u);
+  }catch(e){ setSpeaking(speaker,false); }
+}
+
+/* ---------- sound effects (synthesised via Web Audio — no external files) ---------- */
+let actx;
+function audioCtx(){
+  if (!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx = null; } }
+  if (actx && actx.state==='suspended'){ actx.resume().catch(()=>{}); }
+  return actx;
+}
+function playBubbleSound(){
+  if (!S.soundOn) return;
+  const ctx = audioCtx(); if (!ctx) return;
+  const now = ctx.currentTime;
+  [0,0.07,0.14].forEach((t,i)=>{
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine';
+    const f0 = 620+i*150, f1 = f0*2.1;
+    o.frequency.setValueAtTime(f0, now+t);
+    o.frequency.exponentialRampToValueAtTime(f1, now+t+0.09);
+    g.gain.setValueAtTime(0.0001, now+t);
+    g.gain.exponentialRampToValueAtTime(0.22, now+t+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+t+0.12);
+    o.connect(g).connect(ctx.destination);
+    o.start(now+t); o.stop(now+t+0.14);
+  });
+}
+function playDrownSound(){
+  if (!S.soundOn) return;
+  const ctx = audioCtx(); if (!ctx) return;
+  const now = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(420, now);
+  o.frequency.exponentialRampToValueAtTime(85, now+0.5);
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.16, now+0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+0.55);
+  o.connect(g).connect(ctx.destination);
+  o.start(now); o.stop(now+0.6);
+  const dur = 0.4, size = Math.floor(ctx.sampleRate*dur);
+  const buf = ctx.createBuffer(1, size, ctx.sampleRate), data = buf.getChannelData(0);
+  for (let i=0;i<size;i++) data[i] = (Math.random()*2-1) * (1 - i/size);
+  const noise = ctx.createBufferSource(); noise.buffer = buf;
+  const filt = ctx.createBiquadFilter(); filt.type = 'lowpass';
+  filt.frequency.setValueAtTime(500, now); filt.frequency.exponentialRampToValueAtTime(110, now+dur);
+  const ng = ctx.createGain(); ng.gain.setValueAtTime(0.12, now); ng.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+  noise.connect(filt).connect(ng).connect(ctx.destination);
+  noise.start(now); noise.stop(now+dur);
+}
+
 let toastT;
 function toast(msg){ let t = $('#toast'); if(!t){ t = document.createElement('div'); t.id='toast'; t.className='toast'; t.setAttribute('role','status'); document.body.appendChild(t);} t.textContent = msg; t.hidden=false; clearTimeout(toastT); toastT = setTimeout(()=>t.hidden=true, 3200); }
 
@@ -224,6 +311,8 @@ const I = {
   play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'
 };
+I.speakerOn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z" fill="currentColor" stroke="none"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+I.speakerOff = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z" fill="currentColor" stroke="none"/><path d="M16 9l5 5M21 9l-5 5"/></svg>';
 
 /* ---------- top bar ---------- */
 function topBar(){
@@ -233,6 +322,7 @@ function topBar(){
     +'<span class="stat streak" title="Day streak">'+I.flame+S.streak+'</span>'
     +'<span class="stat xp" title="XP">'+I.bolt+S.xp+'</span>'
     +'<span class="stat hearts" title="Hearts">'+I.heart+S.hearts+'</span>'
+    +'<button class="iconbtn voice-toggle" id="voicetoggle" aria-pressed="'+S.voiceOn+'" aria-label="'+(S.voiceOn?'Mute character voices':'Unmute character voices')+'">'+(S.voiceOn?I.speakerOn:I.speakerOff)+'</button>'
     +'</div></header>';
 }
 const dayIndex = () => Math.floor(Date.now()/864e5);
@@ -367,6 +457,7 @@ function render(){
   const mc = $('#meetcrew'); if(mc) mc.onclick = ()=>{ S.tab='crew'; save(); render(); window.scrollTo(0,0); };
   const hs = $('#heroStart'); if(hs) hs.onclick = ()=>{ const next = currentKey(); if(next) { const [u,l] = next.split('-').map(Number); startLesson(u,l); } else { S.tab='me'; save(); render(); } };
   const rc = $('#recap'); if(rc) rc.onclick = startRecap;
+  const vt = $('#voicetoggle'); if(vt) vt.onclick = ()=>{ S.voiceOn = !S.voiceOn; if(!S.voiceOn){ try{speechSynthesis.cancel();}catch(e){} } save(); render(); };
   app.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{ const p=L().phrases[+b.dataset.say]; speak(p[1],p[2],'luna'); });
   app.querySelectorAll('[data-rank-view]').forEach(b=>b.onclick=()=>{ S.rankView=b.dataset.rankView; save(); render(); });
   app.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>{
@@ -394,7 +485,7 @@ function openLangSheet(){
 
 /* ---------- onboarding ---------- */
 function openOnboarding(){
-  let step = 0, lang = S.lang, grade = S.grade;
+  let step = 0, lang = S.lang, grade = S.grade, spokenIntro = false;
   const layer = $('#layer');
   function draw(){
     let body = '';
@@ -408,6 +499,7 @@ function openOnboarding(){
       +'<div class="ob-steps">'+[0,1,2].map(i=>'<i class="'+(i<=step?'on':'')+'"></i>').join('')+'</div>'
       +'<div class="stack" style="gap:14px">'+body+'</div>'
       +'<div class="ob-foot"><button class="btn wide" id="obnext">'+(step<2?'Continue':'Start learning '+LANGS[lang].name)+'</button></div></div></div>';
+    if (step===1 && !spokenIntro){ spokenIntro = true; speakLine('Hi, I’m Finn! Three minutes a day is all it takes. I’ll introduce every new word.', 'finn'); }
     $('#obx').onclick = ()=>layer.innerHTML='';
     layer.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; draw(); });
     layer.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{ grade=+b.dataset.g; draw(); });
@@ -441,7 +533,7 @@ function buildLesson(u,l){
   return ex;
 }
 function startLesson(u,l){
-  X = {u,l,ex:buildLesson(u,l),i:0,graded:0,right:0,sel:null,checked:false};
+  X = {u,l,ex:buildLesson(u,l),i:0,graded:0,right:0,sel:null,checked:false,spokenTypes:new Set()};
   drawEx();
 }
 function buildRecapExercises(pool){
@@ -458,7 +550,7 @@ function startRecap(){
   let pool = [];
   doneUnits.forEach(ui=>{ for (let i=0;i<6;i++) pool.push(makeItem(ui,i)); });
   if (pool.length < 4){ toast('Finish a couple more lessons first — Sandy needs more words to quiz you on!'); return; }
-  X = {recap:true, ex:buildRecapExercises(pool), i:0, graded:0, right:0, sel:null, checked:false};
+  X = {recap:true, ex:buildRecapExercises(pool), i:0, graded:0, right:0, sel:null, checked:false, spokenTypes:new Set()};
   drawEx();
 }
 function optionsFor(e){
@@ -509,6 +601,13 @@ function drawEx(){
   const say = $('#say');
   if (say) say.onclick = ()=>speak(e.item.s, e.item.t, e.type==='spell'?'ollie':'finn');
   if (e.type==='listen') setTimeout(()=>speak(e.item.s,e.item.t,'finn'), 350);
+  else if (['intro','spell','match'].includes(e.type) && !X.spokenTypes.has(e.type)){
+    X.spokenTypes.add(e.type);
+    const hint = e.type==='intro' ? 'Here’s a new one. Tap the speaker and say it out loud with me!'
+      : e.type==='spell' ? 'Think of the word you just learned, then pick how it’s spelled in English letters.'
+      : 'Speed round! Tap a word, then its meaning.';
+    speakLine(hint, e.type==='spell'?'ollie':e.type==='match'?'pip':'finn');
+  }
   if (e.type==='intro'){ $('#go').onclick = next; return; }
   if (e.type==='match'){ wireMatch(e); return; }
   layer.querySelectorAll('.opts .opt').forEach(b=>b.onclick=()=>{
@@ -528,8 +627,8 @@ function wireMatch(e){
     if (side==='L'){ X.pickL=b; const it=e.items.find(i=>i.id===b.dataset.id); speakQuiet(it); } else X.pickR=b;
     if (X.pickL && X.pickR){
       const a=X.pickL, c=X.pickR; X.pickL=X.pickR=null;
-      if (a.dataset.id===c.dataset.id){ [a,c].forEach(o=>{o.classList.add('right'); setTimeout(()=>{o.classList.remove('right');o.classList.add('matched');o.setAttribute('aria-pressed','false');},250);}); X.matchLeft--; }
-      else { X.matchMiss++; [a,c].forEach(o=>{o.classList.add('wrong','flash'); setTimeout(()=>{o.classList.remove('wrong','flash');o.setAttribute('aria-pressed','false');},450);}); }
+      if (a.dataset.id===c.dataset.id){ playBubbleSound(); [a,c].forEach(o=>{o.classList.add('right'); setTimeout(()=>{o.classList.remove('right');o.classList.add('matched');o.setAttribute('aria-pressed','false');},250);}); X.matchLeft--; }
+      else { playDrownSound(); X.matchMiss++; [a,c].forEach(o=>{o.classList.add('wrong','flash'); setTimeout(()=>{o.classList.remove('wrong','flash');o.setAttribute('aria-pressed','false');},450);}); }
       if (X.matchLeft===0){
         X.graded++; if (X.matchMiss===0) X.right++;
         showFeedback(true, X.matchMiss===0 ? pick(PRAISE.pip) : 'All matched! ('+X.matchMiss+' slip'+(X.matchMiss>1?'s':'')+')', '', 'pip');
@@ -544,8 +643,9 @@ function check(){
   X.checked = true; X.graded++;
   const layer = $('#layer');
   layer.querySelectorAll('.opts .opt').forEach((b,i)=>{ if (X.opts[i].id===e.item.id) b.classList.add('right'); else if (i===X.sel) b.classList.add('wrong'); });
-  if (ok){ X.right++; const who = Math.random()<.5?'finn':'pip'; showFeedback(true, pick(PRAISE[who]), '<span class="word">'+esc(e.item.t)+'</span> = '+esc(e.item.e), who); }
+  if (ok){ playBubbleSound(); X.right++; const who = Math.random()<.5?'finn':'pip'; showFeedback(true, pick(PRAISE[who]), '<span class="word">'+esc(e.item.t)+'</span> = '+esc(e.item.e), who); }
   else {
+    playDrownSound();
     S.hearts = Math.max(0,S.hearts-1); save();
     const hs = layer.querySelector('.lx-top .hearts'); if (hs) hs.innerHTML = I.heart+S.hearts;
     showFeedback(false, 'Not quite. Correct answer:', '<span class="word">'+esc(e.item.t)+'</span> = '+esc(e.item.e), 'ollie');
@@ -558,6 +658,7 @@ function showFeedback(ok, title, detail, who){
   foot.classList.add(ok?'good':'bad');
   fb.innerHTML = avatar(who,40)+'<div><h3>'+esc(title)+'</h3>'+(detail?'<p>'+detail+'</p>':'')+'</div>';
   fb.hidden = false;
+  speakLine(title, who);
 }
 function outOfHearts(){
   const layer = $('#layer');
@@ -565,6 +666,7 @@ function outOfHearts(){
   layer.innerHTML = '<div class="overlay"><div class="inner"><div class="done-screen">'+avatar('luna',96)
     +'<h2 style="color:var(--bad)">Out of hearts</h2><p style="max-width:32ch">“Rest a moment, dear one. Even a river rests at the ghat.” Come back tomorrow for five fresh hearts'+(canRefill?', or let me refill them now.':'.')+'</p>'
     +'<div class="stack" style="width:100%">'+(canRefill?'<button class="btn accent wide" id="dref">Refill with Luna (once a day)</button>':'')+'<button class="btn ghost wide" id="dend">End lesson</button></div></div></div></div>';
+  speakLine('Rest a moment, dear one. Even a river rests at the ghat.', 'luna');
   const r = $('#dref'); if (r) r.onclick = ()=>{ S.hearts=5; S.refillDay=today(); save(); next(); };
   $('#dend').onclick = ()=>{ X=null; layer.innerHTML=''; render(); };
 }
@@ -615,6 +717,7 @@ function showLevelUp(level){
     +'<h2>Level up!</h2><p style="font-family:var(--display);font-weight:700;font-size:20px;color:var(--primary)">Level '+level+' · '+esc(levelTitle(level))+'</p>'
     +(unlockNote?'<p class="note">'+unlockNote+'</p>':'')
     +'<button class="btn wide" id="finlvl">Nice!</button></div></div></div>';
+  speakLine('Level up! You are now a '+levelTitle(level)+'.', 'pip');
   $('#finlvl').onclick = ()=>{ layer.innerHTML=''; S.tab='learn'; render(); };
 }
 document.addEventListener('keydown', e=>{

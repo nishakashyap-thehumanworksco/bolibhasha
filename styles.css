@@ -35,6 +35,16 @@ body{background:linear-gradient(180deg,#bcecf0 0,#e6f7f8 28%,#f4fbfa 100%);color
 .ocean-bg i{position:absolute;bottom:-70px;width:14px;height:14px;border:2px solid rgba(8,127,145,.2);border-radius:50%;animation:bubble-rise linear infinite}
 .ocean-bg i:nth-child(1){left:8%;animation-duration:15s;animation-delay:-4s;transform:scale(.7)}.ocean-bg i:nth-child(2){left:22%;animation-duration:20s;animation-delay:-11s;transform:scale(1.35)}.ocean-bg i:nth-child(3){left:39%;animation-duration:17s;animation-delay:-7s;transform:scale(.55)}.ocean-bg i:nth-child(4){left:58%;animation-duration:23s;animation-delay:-16s;transform:scale(1.7)}.ocean-bg i:nth-child(5){left:75%;animation-duration:18s;animation-delay:-5s;transform:scale(.85)}.ocean-bg i:nth-child(6){left:91%;animation-duration:25s;animation-delay:-19s;transform:scale(1.15)}.ocean-bg i:nth-child(7){left:48%;animation-duration:27s;animation-delay:-21s;transform:scale(.45)}
 @keyframes bubble-rise{0%{opacity:0;translate:0 0}12%{opacity:.7}100%{opacity:0;translate:18px -115vh}}
+/* Real wave motion, layered behind the bubbles: three tiled wave strips,
+   each a repeating background image sliding sideways at its own speed/depth
+   so the ocean genuinely moves rather than just fizzing with bubbles. */
+.ocean-bg .wave{position:absolute;left:0;right:0;bottom:0;height:130px;background-repeat:repeat-x;background-size:220px 130px;background-position:0 bottom}
+.wave.w1{height:150px;opacity:.55;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 130'%3E%3Cpath d='M0,60 C40,20 80,100 110,60 C140,20 180,100 220,60 L220,130 L0,130 Z' fill='%23087f91'/%3E%3C/svg%3E");animation:wave-slide 16s linear infinite}
+.wave.w2{height:120px;bottom:-8px;opacity:.4;background-size:260px 120px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 120'%3E%3Cpath d='M0,55 C50,10 90,95 130,55 C170,10 210,95 260,55 L260,120 L0,120 Z' fill='%2342c4c1'/%3E%3C/svg%3E");animation:wave-slide-rev 24s linear infinite}
+.wave.w3{height:100px;bottom:-18px;opacity:.28;background-size:190px 100px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 100'%3E%3Cpath d='M0,45 C35,15 60,80 95,45 C130,15 155,80 190,45 L190,100 L0,100 Z' fill='%23ffc857'/%3E%3C/svg%3E");animation:wave-slide-slow 30s linear infinite}
+@keyframes wave-slide{to{background-position-x:-220px}}
+@keyframes wave-slide-rev{to{background-position-x:260px}}
+@keyframes wave-slide-slow{to{background-position-x:-190px}}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:12px}
 h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0;text-wrap:balance}
@@ -69,11 +79,15 @@ p{margin:0}
 .av{--c:#999;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--c);color:#fff;font-family:var(--display);font-weight:800;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
 .av svg{width:100%;height:100%}
 .av img{width:100%;height:100%;display:block}
-.av.critter{background:none;box-shadow:none}
-.av.speaking{animation:mascot-talk .42s ease-in-out infinite alternate;filter:drop-shadow(0 0 8px rgba(255,200,87,.82));position:relative;z-index:1}
-.av.speaking::after{content:"";position:absolute;right:-3px;bottom:2px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:8px -8px 0 -2px var(--accent);animation:speech-dots .7s ease-in-out infinite}
-@keyframes mascot-talk{from{transform:translateY(0) rotate(-2deg) scale(1)}to{transform:translateY(-4px) rotate(2deg) scale(1.05)}}
-@keyframes speech-dots{50%{opacity:.35;transform:translateY(-2px)}}
+.av.critter{background:none;box-shadow:none;animation:mascot-float 3.4s ease-in-out infinite;animation-delay:var(--fd,0s);transform-origin:50% 85%}
+.av.speaking{animation:mascot-talk .38s ease-in-out infinite alternate;filter:drop-shadow(0 0 11px rgba(255,200,87,.9));position:relative;z-index:1}
+.av.speaking::after{content:"";position:absolute;right:-2px;bottom:4px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:9px -9px 0 -2px var(--accent),3px -16px 0 -4px var(--accent);animation:speech-dots .6s ease-in-out infinite}
+@keyframes mascot-float{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-7px) rotate(1.5deg)}}
+@keyframes mascot-talk{from{transform:translateY(0) rotate(-3deg) scale(1)}to{transform:translateY(-6px) rotate(3deg) scale(1.09)}}
+@keyframes speech-dots{50%{opacity:.3;transform:translateY(-2px)}}
+.voice-toggle{width:34px;height:34px;flex:none;border-radius:10px}
+.voice-toggle svg{width:18px;height:18px}
+.voice-toggle[aria-pressed="false"]{color:var(--muted);background:var(--surface-2)}
 
 /* path */
 .unit{margin-bottom:28px}
@@ -245,4 +259,4 @@ p{margin:0}
 .sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:min(460px,100%);background:var(--surface);border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100% - 32px);text-align:center}
-@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}.ocean-bg{display:none}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}.ocean-bg,.ocean-bg .wave{display:none}}
