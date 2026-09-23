@@ -83,6 +83,12 @@ p{margin:0}
 .unit-head .guide{margin-left:auto;text-align:center;font-size:11px;opacity:.9}
 .unit.locked .unit-head{background:var(--locked);color:var(--muted);box-shadow:0 4px 0 var(--locked-deep)}
 .unit-head .preview{font-size:14px;opacity:.9;margin-top:2px;font-family:var(--word)}
+.crown-row{display:flex;gap:3px;margin-top:8px}
+.crown-icon{color:rgba(255,255,255,.32);width:15px;height:15px}
+.crown-icon svg{width:100%;height:100%;display:block}
+.crown-icon.on{color:var(--accent)}
+.unit.locked .crown-icon{color:rgba(255,255,255,.5)}
+.unit.locked .crown-icon.on{color:var(--accent-deep)}
 .nodes{display:flex;flex-direction:column;align-items:center;gap:18px;padding-block:22px 4px}
 .node{position:relative;width:72px;height:66px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:22px;transition:transform .12s}
 .node svg{width:30px;height:30px}
@@ -145,6 +151,13 @@ p{margin:0}
 .bigstat{text-align:center;padding:12px 4px}
 .bigstat b{display:block;font-family:var(--display);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
 .bigstat span{font-size:12px;color:var(--muted)}
+.xpbar{height:12px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden;margin-top:12px}
+.xpbar i{display:block;height:100%;background:var(--accent)}
+.badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge-chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);opacity:.4;text-align:center}
+.badge-chip.on{opacity:1;border-color:var(--accent);background:var(--accent-soft)}
+.badge-icon{font-size:26px;line-height:1}
+.badge-name{font-size:11px;font-weight:700;line-height:1.2}
 
 /* ocean world surfaces */
 .ocean-hero{position:relative;overflow:hidden;margin:4px 0 16px;padding:20px;border:0;border-radius:24px;background:linear-gradient(135deg,#086f87,#0b9aa0);color:#fff;box-shadow:0 7px 0 #075b73}

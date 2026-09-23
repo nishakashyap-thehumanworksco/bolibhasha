@@ -369,10 +369,14 @@ function render(){
   const rc = $('#recap'); if(rc) rc.onclick = startRecap;
   app.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{ const p=L().phrases[+b.dataset.say]; speak(p[1],p[2],'luna'); });
   app.querySelectorAll('[data-rank-view]').forEach(b=>b.onclick=()=>{ S.rankView=b.dataset.rankView; save(); render(); });
-  app.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>toast(b.dataset.game==='chess'?'Chess unlocks at level 3. Keep exploring!':'Music mode is ready for your next ocean session.'));
+  app.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>{
+    const unlocked = b.dataset.unlocked === 'true';
+    if (!unlocked){ toast(b.dataset.game==='chess'?'Chess unlocks at level 3. Keep exploring!':'Learn Music unlocks at level 2. Keep exploring!'); return; }
+    toast(b.dataset.game==='chess'?'Chess is coming soon!':'Music mode is coming soon!');
+  });
   const rf = $('#refill'); if(rf) rf.onclick = ()=>{ S.hearts=5; S.refillDay=today(); save(); toast('Luna refilled your hearts. Shabash!'); render(); };
   app.querySelectorAll('[data-grade]').forEach(b=>b.onclick=()=>{ S.grade=+b.dataset.grade; save(); render(); });
-  const rs = $('#reset'); if(rs) rs.onclick = ()=>{ if(confirm('Reset all progress, XP and streak?')){ S = Object.assign(demoState(),{done:{},xp:0,streak:0,lastDay:'',demo:false,lang:S.lang,grade:S.grade,tab:'me'}); save(); render(); } };
+  const rs = $('#reset'); if(rs) rs.onclick = ()=>{ if(confirm('Reset all progress, XP and streak?')){ S = Object.assign(demoState(),{done:{},crowns:{},badges:{},perfectStreak:0,xp:0,streak:0,longestStreak:0,lastDay:'',demo:false,lang:S.lang,grade:S.grade,tab:'me'}); save(); render(); } };
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ S.tab=t.dataset.tab; save(); render(); window.scrollTo(0,0); });
 
@@ -572,12 +576,25 @@ function next(){
 function finish(){
   const recap = !!X.recap;
   const k = recap ? null : X.u+'-'+X.l;
-  const first = recap ? false : !doneMap()[k];
+  const wasDoneBefore = !recap && !!doneMap()[k];
+  const first = recap ? false : !wasDoneBefore;
   const acc = X.graded ? Math.round(X.right/X.graded*100) : 100;
   const xp = recap ? (8 + (acc===100?4:0)) : ((X.l===2?15:10) + (acc===100?5:0));
+  const prevXp = S.xp;
   if (!recap) doneMap()[k] = true;
   S.xp += xp;
   if (S.lastDay !== today()){ S.streak = (S.lastDay===yesterday() ? S.streak : 0) + 1; S.lastDay = today(); }
+  S.longestStreak = Math.max(S.longestStreak, S.streak);
+  S.perfectStreak = acc===100 ? S.perfectStreak+1 : 0;
+  if (!recap && X.l===2){
+    const d = doneMap();
+    const allDone = d[X.u+'-0'] && d[X.u+'-1'] && d[X.u+'-2'];
+    const cur = crownsFor(S.lang, X.u);
+    if (!wasDoneBefore && allDone && cur<1) setCrown(S.lang, X.u, 1);
+    else if (wasDoneBefore && acc===100 && cur<5) setCrown(S.lang, X.u, cur+1);
+  }
+  checkBadges();
+  const newLevel = levelForXP(S.xp), oldLevel = levelForXP(prevXp);
   save();
   const layer = $('#layer');
   const mascot = recap ? 'sandy' : 'pip';
@@ -588,7 +605,17 @@ function finish(){
     +'<div class="done-tiles"><div class="card"><b style="color:var(--primary)">+'+xp+'</b><span>XP</span></div><div class="card"><b style="color:var(--good)">'+acc+'%</b><span>accuracy</span></div><div class="card"><b style="color:var(--accent-deep)">'+S.streak+'</b><span>day streak</span></div></div>'
     +'<div class="card" style="text-align:left;width:100%"><div class="row" style="align-items:flex-start">'+avatar('ollie',40)+'<div style="flex:1;min-width:0"><p class="tip" style="background:none;padding:0">'+tipText+'</p></div></div></div>'
     +'<button class="btn wide" id="fin">'+(first?'Continue':'Back to path')+'</button></div></div></div>';
-  $('#fin').onclick = ()=>{ X=null; layer.innerHTML=''; S.tab='learn'; render(); };
+  $('#fin').onclick = ()=>{ X=null; if (newLevel>oldLevel){ showLevelUp(newLevel); return; } layer.innerHTML=''; S.tab='learn'; render(); };
+}
+function showLevelUp(level){
+  const layer = $('#layer');
+  const unlockNote = level===2 ? 'Learn Music just unlocked in the Games Zone.'
+    : level===3 ? 'Chess just unlocked in the Games Zone.' : '';
+  layer.innerHTML = '<div class="overlay"><div class="inner"><div class="done-screen"><div class="bounce">'+avatar('pip',120)+'</div>'
+    +'<h2>Level up!</h2><p style="font-family:var(--display);font-weight:700;font-size:20px;color:var(--primary)">Level '+level+' · '+esc(levelTitle(level))+'</p>'
+    +(unlockNote?'<p class="note">'+unlockNote+'</p>':'')
+    +'<button class="btn wide" id="finlvl">Nice!</button></div></div></div>';
+  $('#finlvl').onclick = ()=>{ layer.innerHTML=''; S.tab='learn'; render(); };
 }
 document.addEventListener('keydown', e=>{
   if (e.key==='Escape' && $('#sbg')) $('#layer').innerHTML='';
