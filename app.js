@@ -162,6 +162,7 @@ S.longestStreak = S.longestStreak || S.streak || 0;
 S.perfectStreak = S.perfectStreak || 0;
 if (S.voiceOn === undefined) S.voiceOn = true;
 if (S.soundOn === undefined) S.soundOn = true;
+if (S.introSeen === undefined) S.introSeen = false;
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 if (S.heartsDay !== today()){ S.hearts = 5; S.heartsDay = today(); }
 if (S.lastDay !== today() && S.lastDay !== yesterday()) S.streak = 0;
@@ -394,6 +395,7 @@ function renderCrew(){
     const c = CREW[id];
     h += '<div class="card crew-card">'+avatar(id,60)+'<div><p class="tag">'+c.tag+'</p><h3>'+c.name+'</h3><p class="role">'+c.role+'</p><div class="does">'+c.does.map(x=>'<span class="chip">'+x+'</span>').join('')+'</div></div></div>';
   });
+  h += '<button class="btn ghost wide" id="watchintro" style="margin-top:2px">▶ Watch the welcome film</button>';
   return h + '</div><div style="height:16px"></div>';
 }
 
@@ -455,6 +457,7 @@ function render(){
   app.querySelectorAll('.node').forEach(n=>n.onclick=()=>{ if(n.classList.contains('locked')){ toast('Finish the lesson before this one to unlock it.'); return; } const [u,l]=n.dataset.k.split('-').map(Number); startLesson(u,l); });
   const s1 = $('#setup'), s2 = $('#setup2'); if(s1) s1.onclick = openOnboarding; if(s2) s2.onclick = openOnboarding;
   const mc = $('#meetcrew'); if(mc) mc.onclick = ()=>{ S.tab='crew'; save(); render(); window.scrollTo(0,0); };
+  const wi = $('#watchintro'); if(wi) wi.onclick = ()=>showSplash(()=>render());
   const hs = $('#heroStart'); if(hs) hs.onclick = ()=>{ const next = currentKey(); if(next) { const [u,l] = next.split('-').map(Number); startLesson(u,l); } else { S.tab='me'; save(); render(); } };
   const rc = $('#recap'); if(rc) rc.onclick = startRecap;
   const vt = $('#voicetoggle'); if(vt) vt.onclick = ()=>{ S.voiceOn = !S.voiceOn; if(!S.voiceOn){ try{speechSynthesis.cancel();}catch(e){} } save(); render(); };
@@ -698,6 +701,7 @@ function finish(){
   checkBadges();
   const newLevel = levelForXP(S.xp), oldLevel = levelForXP(prevXp);
   save();
+  burstConfetti();
   const layer = $('#layer');
   const mascot = recap ? 'sandy' : 'pip';
   const heading = recap ? 'Recap complete!' : (X.l===2?'Quiz cleared!':'Lesson complete!');
@@ -709,7 +713,25 @@ function finish(){
     +'<button class="btn wide" id="fin">'+(first?'Continue':'Back to path')+'</button></div></div></div>';
   $('#fin').onclick = ()=>{ X=null; if (newLevel>oldLevel){ showLevelUp(newLevel); return; } layer.innerHTML=''; S.tab='learn'; render(); };
 }
+/* ---------- confetti (Duolingo-style celebration burst) ---------- */
+const CONFETTI_COLORS = ['#ffc857','#42c4c1','#ff7180','#58d39b','#a855f7'];
+function burstConfetti(){
+  const host = document.createElement('div'); host.className = 'confetti-burst'; host.setAttribute('aria-hidden','true');
+  for (let i=0;i<26;i++){
+    const p = document.createElement('i');
+    const angle = Math.random()*Math.PI*2, dist = 90+Math.random()*140;
+    p.style.setProperty('--dx', (Math.cos(angle)*dist).toFixed(1)+'px');
+    p.style.setProperty('--dy', (Math.sin(angle)*dist+60).toFixed(1)+'px');
+    p.style.setProperty('--rot', (Math.random()*520-260)+'deg');
+    p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    p.style.animationDelay = (Math.random()*0.12)+'s';
+    host.appendChild(p);
+  }
+  document.body.appendChild(host);
+  setTimeout(()=>host.remove(), 1500);
+}
 function showLevelUp(level){
+  burstConfetti();
   const layer = $('#layer');
   const unlockNote = level===2 ? 'Learn Music just unlocked in the Games Zone.'
     : level===3 ? 'Chess just unlocked in the Games Zone.' : '';
@@ -725,5 +747,31 @@ document.addEventListener('keydown', e=>{
   if (e.key==='Enter' && X && $('#go') && !$('#go').disabled && document.activeElement && !document.activeElement.classList.contains('opt')) $('#go').click();
 });
 
-render();
+/* ---------- welcome splash ----------
+   The crew's own Gemini-made welcome film — Finn, Luna, Ollie, Sandy and
+   Pinchy each saying hello in a different language over the reef — plays
+   once, gated behind a tap (autoplay-with-sound needs a gesture). Shown
+   automatically on first-ever launch, then replayable any time from the
+   Crew tab. */
+function showSplash(onDone){
+  onDone = onDone || (()=>openOnboarding());
+  const layer = $('#layer');
+  layer.innerHTML = '<div class="overlay splash" role="dialog" aria-modal="true" aria-label="Welcome to Boli Bhasha"><div class="inner">'
+    +'<button class="iconbtn splash-skip" id="splashSkip" aria-label="Skip intro">'+I.close+'</button>'
+    +'<div class="splash-media"><video id="introVid" poster="assets/intro-poster.jpg" playsinline preload="metadata"><source src="assets/gemini_generated_video_c1386e04.mp4" type="video/mp4"></video>'
+    +'<button class="splash-play" id="splashPlay" aria-label="Play the welcome video">'+I.play+'</button></div>'
+    +'<div class="splash-panel"><h1>Boli Bhasha</h1><p>Five reef friends, six Indian languages, one small lesson a day.</p>'
+    +'<button class="btn wide accent" id="splashGo">Dive in</button></div></div></div>';
+  const vid = $('#introVid'), playBtn = $('#splashPlay');
+  const finish = ()=>{ try{ vid.pause(); }catch(e){} S.introSeen = true; save(); layer.innerHTML=''; onDone(); };
+  $('#splashSkip').onclick = finish;
+  $('#splashGo').onclick = finish;
+  playBtn.onclick = ()=>{
+    playBtn.hidden = true; vid.muted = false;
+    vid.play().catch(()=>{ vid.muted = true; playBtn.hidden = false; vid.play().catch(()=>{}); });
+  };
+  vid.onended = ()=>{ playBtn.hidden = false; };
+}
+
+if (!S.introSeen) showSplash(); else render();
 })();
