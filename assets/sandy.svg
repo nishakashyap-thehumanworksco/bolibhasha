@@ -1,0 +1,30 @@
+<svg viewBox="0 0 180 160" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="42" cy="118" rx="26" ry="12" fill="#15803d" stroke="#166534" stroke-width="2" transform="rotate(35 42 118)"/>
+<ellipse cx="138" cy="118" rx="26" ry="12" fill="#15803d" stroke="#166534" stroke-width="2" transform="rotate(-35 138 118)"/>
+<ellipse cx="36" cy="72" rx="28" ry="12" fill="#16a34a" stroke="#166534" stroke-width="2" transform="rotate(-30 36 72)"/>
+<ellipse cx="144" cy="72" rx="28" ry="12" fill="#16a34a" stroke="#166534" stroke-width="2" transform="rotate(30 144 72)"/>
+<ellipse cx="90" cy="92" rx="58" ry="48" fill="#16a34a" stroke="#166534" stroke-width="2.5"/>
+<ellipse cx="90" cy="85" rx="50" ry="42" fill="#15803d" stroke="#166534" stroke-width="2.5"/>
+<polygon points="90,62 99,67 99,77 90,82 81,77 81,67" fill="#166534" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<polygon points="72,72 81,77 81,87 72,92 63,87 63,77" fill="#14532d" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<polygon points="108,72 117,77 117,87 108,92 99,87 99,77" fill="#166534" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<polygon points="80,86 89,91 89,101 80,106 71,101 71,91" fill="#14532d" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<polygon points="100,86 109,91 109,101 100,106 91,101 91,91" fill="#166534" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<polygon points="90,98 99,103 99,113 90,118 81,113 81,103" fill="#14532d" stroke="#15803d" stroke-width="1" opacity="0.7"/>
+<ellipse cx="90" cy="85" rx="50" ry="42" fill="none" stroke="#4ade80" stroke-width="1.5" opacity="0.3"/>
+<ellipse cx="90" cy="44" rx="28" ry="24" fill="#22c55e" stroke="#166534" stroke-width="2.5"/>
+<ellipse cx="90" cy="44" rx="20" ry="16" fill="#4ade80" opacity="0.35"/>
+<circle cx="74" cy="38" r="13" fill="white" stroke="#166534" stroke-width="2"/>
+<circle cx="106" cy="38" r="13" fill="white" stroke="#166534" stroke-width="2"/>
+<circle cx="77" cy="38" r="8" fill="#1a1a2e"/>
+<circle cx="109" cy="38" r="8" fill="#1a1a2e"/>
+<circle cx="80" cy="34" r="3" fill="white"/>
+<circle cx="112" cy="34" r="3" fill="white"/>
+<circle cx="75" cy="40" r="1.5" fill="white"/>
+<circle cx="107" cy="40" r="1.5" fill="white"/>
+<circle cx="87" cy="50" r="2.5" fill="#166534"/>
+<circle cx="93" cy="50" r="2.5" fill="#166534"/>
+<path d="M72 56 Q90 70 108 56" stroke="#166534" stroke-width="3" fill="none" stroke-linecap="round"/>
+<ellipse cx="62" cy="50" rx="9" ry="6" fill="#86efac" opacity="0.55"/>
+<ellipse cx="118" cy="50" rx="9" ry="6" fill="#86efac" opacity="0.55"/>
+</svg>

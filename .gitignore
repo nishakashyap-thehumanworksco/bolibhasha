@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+
+# Reference-only source material (textbook scans) — kept local, never published
+content/
