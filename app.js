@@ -714,7 +714,7 @@ function finish(){
   $('#fin').onclick = ()=>{ X=null; if (newLevel>oldLevel){ showLevelUp(newLevel); return; } layer.innerHTML=''; S.tab='learn'; render(); };
 }
 /* ---------- confetti (Duolingo-style celebration burst) ---------- */
-const CONFETTI_COLORS = ['#ffc857','#42c4c1','#ff7180','#58d39b','#a855f7'];
+const CONFETTI_COLORS = ['#ffe48f','#8afcef','#ff9bb5','#b4ffd9','#d9a6ff'];
 function burstConfetti(){
   const host = document.createElement('div'); host.className = 'confetti-burst'; host.setAttribute('aria-hidden','true');
   for (let i=0;i<26;i++){
