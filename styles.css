@@ -405,3 +405,5 @@ button:focus-visible,[tabindex]:focus-visible{outline-color:#8afcef}
 /* mascots: wet glow so they float in the water instead of sitting on a card */
 .av.critter img{filter:drop-shadow(0 10px 12px rgba(0,8,26,.55)) drop-shadow(0 0 12px rgba(120,230,255,.25))}
 .av.speaking img{filter:drop-shadow(0 0 16px rgba(255,214,120,.9))}
+.av.critter img{transform:scale(1.18)}
+.rank-row.you{bottom:96px}
